@@ -8,6 +8,7 @@ generate_exception(4) -> {'EXIT', a};
 generate_exception(5) -> erlang:error(a).
 
 demo() -> [catcher(I) || I <- [1,2,3,4,5]].
+demo2() -> [lookup(I) || I <- [1,2]].
 
 catcher(N) ->
 	try generate_exception(N) of
@@ -17,5 +18,13 @@ catcher(N) ->
 		exit:X -> {N, caught, exit, X};
 		error:X -> {N, caught, error, X}
 	end.
+
+
+lookup(N) ->
+	case N of
+		1 -> {'Exit', 1};
+		2 -> exit(a)
+	end.
+
 
 

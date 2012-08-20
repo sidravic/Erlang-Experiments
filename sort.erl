@@ -8,3 +8,9 @@ qsort([Pivot|Tail]) ->
 	++ [Pivot] ++
 	qsort([X || X <- Tail, X >= Pivot]).
 
+
+
+[3,2,1,4]
+3,[2,1,4]
+
+[2,1]
