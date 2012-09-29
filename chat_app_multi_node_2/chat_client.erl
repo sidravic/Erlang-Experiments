@@ -20,7 +20,7 @@ send_message(NickName, MessageBody) ->
 
 print_msg(NickName) ->
 	receive
-		{printmsg, MessageBody} ->			
+		{print_msg, MessageBody} ->			
 			io:format("~p received ~p~n", [NickName, MessageBody]),
 			print_msg(NickName);
 		stop ->

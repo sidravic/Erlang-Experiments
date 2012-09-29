@@ -1,17 +1,19 @@
 -module(message_router).
--define(SERVER, message_router_pid).
 -compile(export_all).
+-define(SERVER, message_router).
 
 start() -> 
-	global:trans({?SERVER, ?SERVER},
-		fun() -> 
-			case global:whereis_name(?SERVER) of
-				undefined ->
-					global:register_name(?SERVER, spawn(message_router, route, [dict:new()]));
-				_ ->
-					ok				
-			end
-		end).
+	server_util:start(?SERVER, {message_router, route, [dict:new()]}),
+	message_store:start().
+	% global:trans({?SERVER, ?SERVER},
+	% 	fun() -> 
+	% 		case global:whereis_name(?SERVER) of
+	% 			undefined ->
+	% 				global:register_name(?SERVER, spawn(message_router, route, [dict:new()]));
+	% 			_ ->
+	% 				ok				
+	% 		end
+	% 	end).
 	% global:register(?SERVER, spawn(message_router, route, [dict:new()]))
 	% erlang:register(?SERVER, spawn(message_router, route, [dict:new()])).
 
@@ -28,16 +30,18 @@ unregister_nick(ClientName) ->
 	% ?SERVER ! {unregister_nick, ClientName}.
 
 stop() ->
-	global:trans({?SERVER, ?SERVER}, 
-		fun() ->
- 			case global:whereis_name(?SERVER) of
- 				undefined ->
- 					ok;
- 				_ ->
- 					global:send(?SERVER, stop)			
-			end
-		end
-	).
+	server_util:stop(?SERVER),
+	message_store:stop().
+	% global:trans({?SERVER, ?SERVER}, 
+	% 	fun() ->
+ 	%		case global:whereis_name(?SERVER) of
+ 	%			undefined ->
+ 	% 				ok;
+ 	%			_ ->
+ 	%				global:send(?SERVER, stop)			
+	% 		end
+	% 	end
+	% ).
 	
 	% ?SERVER ! stop.
 
@@ -46,12 +50,15 @@ route(Clients) ->
 		{send_chat_msg, Addressee, MessageBody} ->
 			case dict:find(Addressee, Clients) of 
 				{ok, ClientPid} ->
-					ClientPid ! {printmsg, MessageBody};
+					ClientPid ! {print_msg, MessageBody};
 				error ->
-					io:format("Could not find NickName ~p~n", [Addressee])
+					message_store:save_message(Addressee, MessageBody),
+					io:format("Offline Message Store... ~p~n", [Addressee])
 			end,			
 			route(Clients);		
-		{register_nick, ClientName, ClientPid}  ->
+		{register_nick, ClientName, ClientPid}  ->			
+			Messages = message_store:find_message(ClientName),
+			lists:foreach(fun(Msg) ->  ClientPid ! {print_msg, Msg} end, Messages),
 			route(dict:store(ClientName, ClientPid, Clients));
 		{unregister_nick, ClientName} ->
 			case dict:find(ClientName, Clients) of
